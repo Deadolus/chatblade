@@ -10,18 +10,13 @@ from rich.rule import Rule
 
 console = Console()
 
-DEFAULT_ARGS = {
-    "roles": ["user", "assistant"],
-}
-
 
 def warn(msg):
     rich.print(f"[red]{msg}[/red]")
 
 
 def print_tokens(messages, token_stats, args):
-    args = {**DEFAULT_ARGS, **args}
-    args["roles"] = ["user", "assistant", "system"]
+    args.roles = ["user", "assistant", "system"]
     print_messages(messages, args)
     console.print()
     table = Table(title="tokens/costs")
@@ -41,14 +36,12 @@ def print_tokens(messages, token_stats, args):
 
 
 def print_messages(messages, args):
-    args = {**DEFAULT_ARGS, **args}
-    if args["raw"]:
-        print(messages[-1].content)
-    elif args["extract"]:
+    args.roles = ["user", "assistant"]
+    if args.extract:
         extract_messages(messages, args)
     else:
         for message in messages:
-            if message.role in args["roles"]:
+            if message.role in args.roles:
                 print_message(message, args)
 
 
@@ -56,9 +49,11 @@ COLORS = {"user": "blue", "assistant": "green", "system": "red"}
 
 
 def print_message(message, args):
-    printable = detect_and_format_message(
-        message.content, cutoff=1000 if message.role == "user" else None
-    )
+    printable = message.content
+    if not args.raw:
+        printable = detect_and_format_message(
+            message.content, cutoff=1000 if message.role == "user" else None
+        )
     console.print(Rule(message.role, style=COLORS[message.role]))
     console.print(printable)
     console.print(Rule(style=COLORS[message.role]))

@@ -1,12 +1,32 @@
 import sys
+import types
+
 import rich
 from rich.prompt import Prompt
+from rich.live import Live
+from rich.text import Text
 
 from . import printer, chat, utils, storage, errors, parser
 
 
+def get_piped_input():
+    if not sys.stdin.isatty():
+        return sys.stdin.read()
+    return None
+
+
 def fetch_and_cache(messages, params):
-    response_msg, _ = chat.query_chat_gpt(messages, params)
+    result = chat.query_chat_gpt(messages, params)
+    if isinstance(result, types.GeneratorType):
+        text = Text("")
+        message = None
+        with Live(text, refresh_per_second=4) as live:
+            for message in result:
+                live.update(message.content)
+            live.update("")
+        response_msg = message
+    else:
+        response_msg = chat.query_chat_gpt(messages, params)
     messages.append(response_msg)
     storage.to_cache(messages)
     return messages
