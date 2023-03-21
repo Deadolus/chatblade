@@ -2,17 +2,16 @@ import json
 import re
 import rich
 from rich.console import Console
-from rich.panel import Panel
+from rich.rule import Rule
 from rich.json import JSON
 from rich.markdown import Markdown
 from rich.table import Table
+from rich.panel import Panel
 
+
+COLORS = {"user": "blue", "assistant": "green", "system": "red"}
 
 console = Console()
-
-DEFAULT_ARGS = {
-    "roles": ["user", "assistant"],
-}
 
 
 def warn(msg):
@@ -20,10 +19,9 @@ def warn(msg):
 
 
 def print_tokens(messages, token_stats, args):
-    args = {**DEFAULT_ARGS, **args}
-    args["roles"] = ["user", "assistant", "system"]
+    args.roles_to_show = ["user", "assistant", "system"]
     print_messages(messages, args)
-    console.print()
+    console.print()  # line
     table = Table(title="tokens/costs")
     table.add_column("Model", no_wrap=True)
     table.add_column("Tokens", no_wrap=True)
@@ -41,26 +39,29 @@ def print_tokens(messages, token_stats, args):
 
 
 def print_messages(messages, args):
-    args = {**DEFAULT_ARGS, **args}
-    if args["raw"]:
+    args.roles_to_show = ["user", "assistant"]
+    if args.raw:
         print(messages[-1].content)
-    elif args["extract"]:
+    elif args.extract:
         extract_messages(messages, args)
     else:
         for message in messages:
-            if message.role in args["roles"]:
+            if message.role in args.roles_to_show:
                 print_message(message, args)
-
-
-COLORS = {"user": "blue", "assistant": "green", "system": "red"}
 
 
 def print_message(message, args):
     printable = detect_and_format_message(
         message.content, cutoff=1000 if message.role == "user" else None
     )
-    printable = Panel(printable, title=message.role, border_style=COLORS[message.role])
-    console.print(printable)
+    if args.box_display:
+        printable = Panel(
+            printable, title=message.role, border_style=COLORS[message.role]
+        )
+        console.print(printable)
+    else:
+        console.print(Rule(message.role), style=COLORS[message.role])
+        console.print(printable)
 
 
 def extract_messages(messages, args):
